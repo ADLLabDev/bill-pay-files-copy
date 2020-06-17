@@ -1,12 +1,14 @@
 <?php
-    require_once './vendor/autoload.php';
+require_once './vendor/autoload.php';
 
-    use GlobalPayments\Api\ServicesConfig;
-    use GlobalPayments\Api\ServicesContainer;
-    use GlobalPayments\Api\Entities\Address;
-    use GlobalPayments\Api\Entities\Exceptions\ApiException;
-    use GlobalPayments\Api\PaymentMethods\CreditCardData;
-    
+use GlobalPayments\Api\ServicesConfig;
+use GlobalPayments\Api\ServicesContainer;
+use GlobalPayments\Api\Entities\Address;
+use GlobalPayments\Api\Entities\Exceptions\ApiException;
+use GlobalPayments\Api\PaymentMethods\CreditCardData;
+
+if (!empty($_POST['payment_token'])) {
+    error_log('configuring sdk');
     $hl_config = new ServicesConfig();
     $hl_config->secretApiKey = "skapi_cert_MVI8AgCt42EAaTBZ8ihXJjFxzz3F1ifo4MDJY8GCXg";
     $hl_config->developerId = "000000"; ##change these after certification
@@ -14,23 +16,31 @@
     $hl_config->serviceUrl = "https://cert.api2.heartlandportico.com";
     ServicesContainer::configure($hl_config);
 
+    error_log('creating card object');
     $card = new CreditCardData();
-    $card->token = "single-use token";
+    $card->token = $_POST['payment_token'];
 
+    error_log('creating address object');
     $address = new Address(); ##add more fields in here?
     $address->postalCode = "19020";
 
+    error_log('attempting authorization request');
     try{
-        $repsonse = $card->charge(12.34)
+        $response = $card->charge(12.34)
         ->withCurrency("USD")
         ->withAddress($address)
         ->execute();
 
-        echo $response;
+        error_log('success');
+        print_r($response);
     }catch(ApiException $e) {
+        error_log('error');
         // handle error
-        echo $e;
+        echo $e->getMessage();
     }
+
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -84,7 +94,7 @@
     });
 </script>
 <body>
-    <form id="payment-form" action="/Payment/Charge" method="get">
+    <form id="payment-form" action="<?= $_SERVER['PHP_SELF'] ?>" method="post">
         <!-- Other input fields to capture relevant data -->
         <label for="billing_zip">Billing Zip Code</label>
         <input id="billing_zip" name="billing_zip" value="47150" type="tel" />
